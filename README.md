@@ -1,8 +1,14 @@
 # jensen
 
-A LLM powered Telegram bot
+A LLM powered Telegram bot.
 
 ### Prerequisites:
+
+First you need to create a Telegram bot to interact with. 
+
+- Telegram bot
+
+See instructions (here)[https://core.telegram.org/bots].
 
 You need Python 3 on your machine.
 
@@ -44,5 +50,5 @@ API_KEY=<api key>
 Start the application:
 
 ```bash
-python3 ./jensen/app.py
+python ./jensen/app.py
 ```
