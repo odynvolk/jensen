@@ -1,20 +1,26 @@
 # jensen
 
-A LLM powered Telegram bot.
+A Llama 2 powered Telegram bot.
 
-### Prerequisites:
+## Prerequisites:
 
-First you need to create a Telegram bot to interact with. 
+### Telegram bot
 
-- Telegram bot
+First you need to create a Telegram bot to interact with. See instructions [here](https://core.telegram.org/bots).
 
-See instructions (here)[https://core.telegram.org/bots].
+### Llama 2 model
+
+You need a Llama 2 model in GGML format to use. You can find quite a few through [TheBloke on HuggingFace](https://huggingface.co/TheBloke)
+who has done an enormous service to the community by converting models to GGML and quantized them. Pick one that suits your needs
+and hardware requirements.
+
+### Python
 
 You need Python 3 on your machine.
 
 - Miniconda (optional)
 
-For handling the packages needed.
+For handling the packages needed for different enivronments.
 
 ```bash
 $ curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh -o Miniconda3-latest-MacOSX-arm64.sh
@@ -23,7 +29,7 @@ $ ./Miniconda3-latest-MacOSX-arm64.sh -b -p $HOME/miniconda
 $ source ~/miniconda/bin/activate
 ```
 
-- LLM models, Telegram etc
+- Llama 2, Telegram etc
 
 For using Llama 2 models, Telegram API etc
 
@@ -31,21 +37,23 @@ For using Llama 2 models, Telegram API etc
 $ pip install -r requirements.txt
 ```
 
-- Configuration
+## Configuration
 
 Create a `.env` file with the following properties.
 
 ```
 # LLM
-MODEL_PATH=<path to model file>
-N_CTX=<number of context>
-MAX_TOKENS=<max tokens>
+MODEL_PATH=<path to model file, string>
+N_CTX=<number of context, int>
+MAX_TOKENS=<max tokens, int>
+N_THREADS=<number of threads to use for Llama usage, int>
 
 # Telegram
-API_KEY=<api key>
+API_KEY=<api key, string>
+POLL_INTERVAL=<interval to use when polling Telegram as seconds, float>
 ```
 
-### Usage
+## Usage
 
 Start the application:
 
