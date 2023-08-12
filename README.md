@@ -44,8 +44,9 @@ Create a `.env` file with the following properties.
 ```
 # LLM
 MODEL_PATH=<path to model file, string>
+    MAX_TOKENS=<max tokens, int>
 N_CTX=<number of context, int>
-MAX_TOKENS=<max tokens, int>
+N_GPU_LAYERS<int>
 N_THREADS=<number of threads to use for Llama usage, int>
 
 # Telegram
