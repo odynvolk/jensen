@@ -8,8 +8,7 @@ from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandl
 
 load_dotenv()
 
-
-class Robin(object):
+class Jensen(object):
     def __init__(self):
         self.MODEL_PATH = os.getenv("MODEL_PATH")
         self.N_CTX = int(os.getenv("N_CTX")) if os.getenv("N_CTX") else 512
@@ -57,6 +56,13 @@ class Robin(object):
         history = f"{self.history}\n" if len(self.history) > 1 else self.history
         return f"{history}USER: {string}\nASSISTANT: "
 
+    def remove_one_prompt_from_history(self):
+        try:
+            index = self.history.index("USER:", 20)
+            self.history = self.history[index:]
+        except ValueError:
+            pass
+
     def prompt_llm(self, prompt):
         output = self.LLM(prompt, max_tokens=self.MAX_TOKENS)
         return output["choices"][0]["text"]
@@ -73,8 +79,8 @@ class Robin(object):
             assistant = self.prompt_llm(prompt)
         except ValueError:
             await update.message.reply_text(
-                "Woops, something went wrong. Lets try again after clearing prompt history.")
-            await self.clear(update, context)
+                "Woops, something went wrong. Trying again after removing some prompt history.")
+            self.remove_one_prompt_from_history()
             prompt = self.create_prompt(update.message.text)
             assistant = self.prompt_llm(prompt)
 
@@ -93,7 +99,7 @@ if __name__ == "__main__":
     import traceback
 
     try:
-        robin = Robin()
-        robin.run()
+        jensen = Jensen()
+        jensen.run()
     except Exception:
         print(traceback.format_exc())
