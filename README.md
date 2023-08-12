@@ -10,9 +10,9 @@ First you need to create a Telegram bot to interact with. See instructions [here
 
 ### Llama 2 model
 
-You need a Llama 2 model in GGML format to use. You can find quite a few through [TheBloke on HuggingFace](https://huggingface.co/TheBloke)
-who has done an enormous service to the community by converting models to GGML and quantized them. Pick one that suits your needs
-and hardware requirements.
+You need a Llama 2 model in GGML format. You can find quite a few through [TheBloke on HuggingFace](https://huggingface.co/TheBloke)
+who has done an enormous service to the community by converting different models to GGML and quantized them. Pick one that suits your
+needs and hardware requirements.
 
 ### Python
 
@@ -43,14 +43,14 @@ Create a `.env` file with the following properties.
 
 ```
 # LLM
-MODEL_PATH=<path to model file, string>
-    MAX_TOKENS=<max tokens, int>
+MODEL_PATH=<path to model file, string> (mandatory)
+MAX_TOKENS=<max tokens, int>
 N_CTX=<number of context, int>
 N_GPU_LAYERS<how many layers to offload to the GPU, int>
 N_THREADS=<number of threads to use for Llama usage, int>
 
 # Telegram
-API_KEY=<api key, string>
+API_KEY=<api key, string> (mandatory)
 POLL_INTERVAL=<interval to use when polling Telegram as seconds, float>
 ```
 

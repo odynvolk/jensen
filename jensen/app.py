@@ -8,6 +8,7 @@ from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandl
 
 load_dotenv()
 
+
 class Jensen(object):
     def __init__(self):
         self.MODEL_PATH = os.getenv("MODEL_PATH")
@@ -56,10 +57,11 @@ class Jensen(object):
         history = f"{self.history}\n" if len(self.history) > 1 else self.history
         return f"{history}USER: {string}\nASSISTANT: "
 
-    def remove_one_prompt_from_history(self):
+    def remove_prompt_from_history(self, n=2):
         try:
-            index = self.history.index("USER:", 20)
-            self.history = self.history[index:]
+            for i in range(n):
+                index = self.history.index("USER:", 20)
+                self.history = self.history[index:]
         except ValueError:
             pass
 
@@ -80,7 +82,7 @@ class Jensen(object):
         except ValueError:
             await update.message.reply_text(
                 "Woops, something went wrong. Trying again after removing some prompt history.")
-            self.remove_one_prompt_from_history()
+            self.remove_prompt_from_history()
             prompt = self.create_prompt(update.message.text)
             assistant = self.prompt_llm(prompt)
 
@@ -94,6 +96,7 @@ class Jensen(object):
 
         for reply in self.split_string(assistant):
             await update.message.reply_text(reply)
+
 
 if __name__ == "__main__":
     import traceback
