@@ -16,6 +16,7 @@ class Jensen(object):
         self.N_GPU_LAYERS = int(os.getenv("N_GPU_LAYERS")) if os.getenv("N_GPU_LAYERS") else 0
         self.N_THREADS = int(os.getenv("N_THREADS")) if os.getenv("N_THREADS") else None
         self.MAX_TOKENS = int(os.getenv("MAX_TOKENS")) if os.getenv("MAX_TOKENS") else 512
+        self.USE_MLOCK = os.getenv("USE_MLOCK").lower() == "true" if os.getenv("USE_MLOCK") else False
 
         self.API_KEY = os.getenv("API_KEY")
         self.POLL_INTERVAL = float(os.getenv("POLL_INTERVAL")) if os.getenv("POLL_INTERVAL") else 1.0
@@ -23,7 +24,7 @@ class Jensen(object):
         self.history = ""
 
         self.LLM = Llama(model_path=self.MODEL_PATH, n_ctx=self.N_CTX, n_gpu_layers=self.N_GPU_LAYERS,
-                         n_threads=self.N_THREADS)
+                         n_threads=self.N_THREADS, use_mlock=self.USE_MLOCK)
 
         self.application = Application.builder().token(self.API_KEY).build()
 
@@ -72,7 +73,7 @@ class Jensen(object):
     async def assist(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await context.bot.send_chat_action(chat_id=update.effective_message.chat_id, action=constants.ChatAction.TYPING)
         prompt = self.create_prompt(update.message.text)
-        print("-------------- prompt --------------")
+        print("-------------- PROMPT --------------")
         print(prompt)
 
         start = timer()
@@ -87,12 +88,15 @@ class Jensen(object):
             assistant = self.prompt_llm(prompt)
 
         print(assistant)
-
+        
         end = timer()
+        
         print(f"DURATION: {int(end - start)} seconds.")
         self.history = f"{prompt}{assistant}"
-        print("-------------- history --------------")
+        print("-------------------------------------")
+        print("-------------- HISTORY --------------")
         print(self.history)
+        print("-------------------------------------")
 
         for reply in self.split_string(assistant):
             await update.message.reply_text(reply)
