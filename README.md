@@ -48,6 +48,7 @@ MAX_TOKENS=<max tokens, int>
 N_CTX=<number of context, int>
 N_GPU_LAYERS<how many layers to offload to the GPU, int>
 N_THREADS=<number of threads to use for Llama usage, int>
+USE_MLOCK=<force the system to keep the model in RAM., bool>
 
 # Telegram
 API_KEY=<api key, string> (mandatory)
