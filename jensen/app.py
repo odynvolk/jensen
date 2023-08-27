@@ -18,6 +18,8 @@ class Jensen(object):
         self.MAX_TOKENS = int(os.getenv("MAX_TOKENS")) if os.getenv("MAX_TOKENS") else 512
         self.USE_MLOCK = os.getenv("USE_MLOCK").lower() == "true" if os.getenv("USE_MLOCK") else False
 
+        self.PROMPT_FORMAT = os.getenv("PROMPT_FORMAT").lower() if os.getenv("PROMPT_FORMAT") else "vicuna"
+
         self.API_KEY = os.getenv("API_KEY")
         self.POLL_INTERVAL = float(os.getenv("POLL_INTERVAL")) if os.getenv("POLL_INTERVAL") else 1.0
 
@@ -44,11 +46,11 @@ class Jensen(object):
         await update.message.reply_text("Welcome back sir!")
 
     async def about(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        await update.message.reply_text("I'm Jensen your personal Llama 2 powered chatbot.")
+        await update.message.reply_text("I'm Jensen your personal LLaMA 2 powered chatbot.")
 
     async def help(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await update.message.reply_text(
-            "To engage in a conversatiom with me just start typing.\n\nThe commands I understand:\n/about - some information about me Jensen\n/clear - clear prompt history")
+            "To engage in a conversation with me just start typing.\n\nThe commands I understand:\n/about - some information about me Jensen\n/clear - clear prompt history")
 
     async def clear(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         self.history = ""
@@ -56,13 +58,29 @@ class Jensen(object):
 
     def create_prompt(self, string):
         history = f"{self.history}\n" if len(self.history) > 1 else self.history
+
+        if self.PROMPT_FORMAT == "alpaca":
+            return f"{history}### Instruction:\n{string}\n\n### Response:\n"
+        elif self.PROMPT_FORMAT == "nous":
+            return f"{history}### human:\n{string}\n\n### response:"
         return f"{history}USER: {string}\nASSISTANT: "
 
     def remove_prompt_from_history(self, n=2):
+        if self.PROMPT_FORMAT == "alpaca":
+            prompt_string = "### Instruction:"
+        elif self.PROMPT_FORMAT == "nous":
+            prompt_string = "### human:"
+        else:
+            prompt_string = "USER:"
+
         try:
             for i in range(n):
-                index = self.history.index("USER:", 20)
-                self.history = self.history[index:]
+                start_index = self.history.index(prompt_string)
+                end_index = self.history.index(prompt_string, start_index + 7)
+                self.history = f"{self.history[0:start_index]}{self.history[end_index:]}"
+                print("------------ NEW HISTORY ------------")
+                print(self.history)
+                print("-------------------------------------")
         except ValueError:
             pass
 
@@ -99,7 +117,11 @@ class Jensen(object):
         print("-------------------------------------")
 
         for reply in self.split_string(assistant):
-            await update.message.reply_text(reply)
+            stripped = reply.strip()
+            if len(stripped) == 0:
+                await update.message.reply_text("I'm sorry, I don't have an answer.")
+            else:
+                await update.message.reply_text(stripped)
 
 
 if __name__ == "__main__":
