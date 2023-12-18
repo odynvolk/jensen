@@ -63,6 +63,10 @@ class Jensen(object):
             return f"{history}### Instruction:\n{string}\n\n### Response:\n"
         elif self.PROMPT_FORMAT == "nous":
             return f"{history}### human:\n{string}\n\n### response:"
+        elif self.PROMPT_FORMAT == "openchat":
+            return f"{history}\nGPT4 User: {string}<|end_of_turn|>GPT4 Assistant:"
+        elif self.PROMPT_FORMAT == "mistral":
+            return f"{history}\n[INST]{string}[/INST]\n"
         return f"{history}USER: {string}\nASSISTANT: "
 
     def remove_prompt_from_history(self, n=2):
