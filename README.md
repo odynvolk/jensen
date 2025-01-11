@@ -18,15 +18,14 @@ needs and hardware requirements.
 
 You need Python 3 on your machine.
 
-- Miniconda (optional)
+- Micromamba (optional)
 
-For handling the packages needed for different enivronments.
+For handling the packages needed for different enivronments. Easy to install with asdf.
 
 ```bash
-$ curl https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh -o Miniconda3-latest-MacOSX-arm64.sh
-$ chmod +x Miniconda3-latest-MacOSX-arm64.sh
-$ ./Miniconda3-latest-MacOSX-arm64.sh -b -p $HOME/miniconda
-$ source ~/miniconda/bin/activate
+$ asdf install
+$ micromamba create -n jensen python=3.13
+$ micromamba activate jensen
 ```
 
 - LLaMA 2, Telegram etc
