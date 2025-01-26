@@ -67,6 +67,9 @@ class Jensen(object):
             return f"{history}\nGPT4 User: {string}<|end_of_turn|>GPT4 Assistant:"
         elif self.PROMPT_FORMAT == "mistral":
             return f"{history}\n[INST]{string}[/INST]\n"
+        elif self.PROMPT_FORMAT == "deepseek":
+            system_prompt = "You are a helpful assistant"
+            return f"{history}\n<｜begin▁of▁sentence｜>{system_prompt}<｜User｜>{string}<｜Assistant｜>"
         return f"{history}USER: {string}\nASSISTANT: "
 
     def remove_prompt_from_history(self, n=2):
@@ -90,7 +93,8 @@ class Jensen(object):
 
     def prompt_llm(self, prompt):
         output = self.LLM(prompt, max_tokens=self.MAX_TOKENS)
-        return output["choices"][0]["text"]
+        text = output["choices"][0]["text"];
+        return text[text.index("</think>") + 10:]
 
     async def assist(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await context.bot.send_chat_action(chat_id=update.effective_message.chat_id, action=constants.ChatAction.TYPING)
@@ -110,9 +114,9 @@ class Jensen(object):
             assistant = self.prompt_llm(prompt)
 
         print(assistant)
-        
+
         end = timer()
-        
+
         print(f"DURATION: {int(end - start)} seconds.")
         self.history = f"{prompt}{assistant}"
         print("-------------------------------------")
