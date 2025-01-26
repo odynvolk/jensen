@@ -94,7 +94,11 @@ class Jensen(object):
     def prompt_llm(self, prompt):
         output = self.LLM(prompt, max_tokens=self.MAX_TOKENS)
         text = output["choices"][0]["text"];
-        return text[text.index("</think>") + 10:]
+        end_index = text.find("</think>")
+        if end_index > 0:
+          return text[end_index + 10:]
+
+        return text
 
     async def assist(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await context.bot.send_chat_action(chat_id=update.effective_message.chat_id, action=constants.ChatAction.TYPING)
