@@ -77,10 +77,11 @@ class Jensen(object):
         )
 
     def init_prompt(self):
+        system_instruction = os.getenv("SYSTEM_INSTRUCTION") if os.getenv("SYSTEM_INSTRUCTION") else "You are an intelligent assistant providing helpful information."
         self.history = [
             {
                 "role": "system",
-                "content": "You are an intelligent assistant providing helpful information.",
+                "content": system_instruction.strip(),
             },
         ]
 
@@ -92,9 +93,10 @@ class Jensen(object):
         return {"role": "user", "content": string}
 
     def remove_prompt_from_history(self):
-        # Remove first user and assistant prompts
+        # Remove fist user prompts and assistant answers
         self.history.pop(1)
         self.history.pop(1)
+
 
     def prompt_llm(self, prompt):
         self.history.append(prompt)
@@ -113,7 +115,7 @@ class Jensen(object):
         await context.bot.send_chat_action(
             chat_id=update.effective_message.chat_id, action=constants.ChatAction.TYPING
         )
-        prompt = self.create_prompt(update.message.text)
+        prompt = self.create_prompt(update.message.text.strip())
         print("-------------- PROMPT --------------")
         print(prompt)
 
@@ -125,8 +127,7 @@ class Jensen(object):
             await update.message.reply_text(
                 "Woops, something went wrong. Trying again after removing some prompt history."
             )
-            self.remove_prompt_from_history()
-            prompt = self.create_prompt(update.message.text)
+            self.init_prompt()
             assistant = self.prompt_llm(prompt)
 
         print(assistant)

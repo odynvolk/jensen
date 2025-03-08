@@ -1,6 +1,6 @@
 # jensen
 
-A LLaMA 2 powered Telegram bot.
+A LLM powered Telegram bot.
 
 ## Prerequisites:
 
@@ -8,10 +8,10 @@ A LLaMA 2 powered Telegram bot.
 
 First you need to create a Telegram bot to interact with. See instructions [here](https://core.telegram.org/bots).
 
-### LLaMA 2 model
+### LLM model
 
-You need a LLaMA 2 model in GGML format. You can find quite a few through [TheBloke on HuggingFace](https://huggingface.co/TheBloke)
-who has done an enormous service to the community by converting different models to GGML and quantized them. Pick one that suits your
+You need a LLM in GGUF format. You can find quite a few through [TheBloke on HuggingFace](https://huggingface.co/TheBloke)
+who has done an enormous service to the community by converting different models to GGUF and quantized them. Pick one that suits your
 needs and hardware requirements.
 
 ### Python
@@ -28,9 +28,9 @@ $ micromamba create -n jensen python=3.13
 $ micromamba activate jensen
 ```
 
-- LLaMA 2, Telegram etc
+- LLMs, Telegram etc
 
-For using LLaMA 2 models, Telegram API etc
+For using LLM models, Telegram API etc
 
 ```bash
 $ pip install -r requirements.txt
