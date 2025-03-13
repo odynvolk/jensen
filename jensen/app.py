@@ -1,5 +1,5 @@
-# Paste pre-Pyrfected Python
 import os
+import re
 from timeit import default_timer as timer
 
 from dotenv import load_dotenv
@@ -68,7 +68,7 @@ class Jensen(object):
 
     async def about(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await update.message.reply_text(
-            "I'm Jensen your personal LLaMA 2 powered chatbot."
+            "I'm Jensen your personal LLM powered chatbot."
         )
 
     async def help(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -97,19 +97,19 @@ class Jensen(object):
         self.history.pop(1)
         self.history.pop(1)
 
-
     def prompt_llm(self, prompt):
         self.history.append(prompt)
         response = self.LLM.create_chat_completion(
             messages=self.history, max_tokens=self.MAX_TOKENS
         )
+        reply = response["choices"][0]["message"]["content"]
         self.history.append(
             {
                 "role": "assistant",
-                "content": response["choices"][0]["message"]["content"],
+                "content": reply,
             }
         )
-        return response["choices"][0]["message"]["content"]
+        return reply
 
     async def assist(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await context.bot.send_chat_action(
@@ -122,15 +122,16 @@ class Jensen(object):
         start = timer()
 
         try:
-            assistant = self.prompt_llm(prompt)
-        except ValueError:
+            reply = self.prompt_llm(prompt)
+        except ValueError as e:
+            print(e)
             await update.message.reply_text(
                 "Woops, something went wrong. Trying again after removing some prompt history."
             )
             self.init_prompt()
-            assistant = self.prompt_llm(prompt)
+            reply = self.prompt_llm(prompt)
 
-        print(assistant)
+        print(reply)
 
         end = timer()
 
@@ -140,8 +141,14 @@ class Jensen(object):
         print(self.history)
         print("-------------------------------------")
 
-        await update.message.reply_text(assistant)
+        # chunked_replies = re.findall('.{1,3072}', reply)
+        chunked_replies = self.chunk_string(reply)
+        print(f"chunked_replies: {chunked_replies}")
+        for chunked_reply in chunked_replies:
+          await update.message.reply_text(chunked_reply)
 
+    def chunk_string(self, string, length = 3072):
+        return (string[0+i:length+i] for i in range(0, len(string), length))
 
 if __name__ == "__main__":
     import traceback
