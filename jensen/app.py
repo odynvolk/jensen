@@ -97,12 +97,15 @@ class Jensen(object):
         self.history.pop(1)
         self.history.pop(1)
 
+    def clean_reply(self, reply):
+        return reply.replace("<think>\n\n</think>\n\n", "")
+
     def prompt_llm(self, prompt):
         self.history.append(prompt)
         response = self.LLM.create_chat_completion(
             messages=self.history, max_tokens=self.MAX_TOKENS
         )
-        reply = response["choices"][0]["message"]["content"]
+        reply = self.clean_reply(response["choices"][0]["message"]["content"])
         self.history.append(
             {
                 "role": "assistant",
