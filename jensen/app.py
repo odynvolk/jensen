@@ -15,7 +15,6 @@ from telegram.ext import (
 
 load_dotenv()
 
-
 class Jensen(object):
     def __init__(self):
         self.MODEL_PATH = os.getenv("MODEL_PATH")
@@ -46,6 +45,8 @@ class Jensen(object):
             n_gpu_layers=self.N_GPU_LAYERS,
             n_threads=self.N_THREADS,
             use_mlock=self.USE_MLOCK,
+            ubatch_size=512,
+            batch_size=512,
         )
 
         self.application = Application.builder().token(self.API_KEY).build()
@@ -128,9 +129,6 @@ class Jensen(object):
             reply = self.prompt_llm(prompt)
         except ValueError as e:
             print(e)
-            await update.message.reply_text(
-                "Woops, something went wrong. Trying again after removing some prompt history."
-            )
             self.init_prompt()
             reply = self.prompt_llm(prompt)
 
@@ -144,14 +142,47 @@ class Jensen(object):
         print(self.history)
         print("-------------------------------------")
 
-        # chunked_replies = re.findall('.{1,3072}', reply)
-        chunked_replies = self.chunk_string(reply)
+        chunked_replies = self.chunk_string_by_paragraph(reply)
         print(f"chunked_replies: {chunked_replies}")
         for chunked_reply in chunked_replies:
           await update.message.reply_text(chunked_reply)
 
-    def chunk_string(self, string, length = 3072):
-        return (string[0+i:length+i] for i in range(0, len(string), length))
+    def chunk_string_by_paragraph(self, text: str, max_length: int = 3584) -> list[str]:
+        """
+        Chunks a string into parts of at most `max_length` characters,
+        ensuring that each chunk contains complete paragraphs.
+
+        Args:
+            text (str): The input string to be chunked.
+            max_length (int): The maximum length of each chunk.
+
+        Returns:
+            list[str]: A list of chunks, each containing complete paragraphs.
+        """
+        if not text or max_length <= 0:
+            return []
+
+        paragraphs = text.split('\n\n')
+
+        chunks = []
+        current_chunk = ""
+
+        for paragraph in paragraphs:
+            if len(current_chunk) + len(paragraph) + (2 if current_chunk else 0) > max_length:
+                if current_chunk:
+                    chunks.append(current_chunk)
+                current_chunk = ""
+
+            if current_chunk:
+                current_chunk += "\n\n" + paragraph
+            else:
+                current_chunk = paragraph
+
+        if current_chunk:
+            chunks.append(current_chunk)
+
+        return chunks
+
 
 if __name__ == "__main__":
     import traceback
