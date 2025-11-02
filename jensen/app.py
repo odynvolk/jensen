@@ -15,6 +15,7 @@ from telegram.ext import (
 
 load_dotenv()
 
+
 class Jensen(object):
     def __init__(self):
         self.MODEL_PATH = os.getenv("MODEL_PATH")
@@ -45,8 +46,9 @@ class Jensen(object):
             n_gpu_layers=self.N_GPU_LAYERS,
             n_threads=self.N_THREADS,
             use_mlock=self.USE_MLOCK,
-            ubatch_size=512,
-            batch_size=512,
+            ubatch_size=640,
+            batch_size=640,
+            cache_prompt=True,
         )
 
         self.application = Application.builder().token(self.API_KEY).build()
@@ -56,7 +58,7 @@ class Jensen(object):
         self.application.add_handler(CommandHandler("help", self.help))
         self.application.add_handler(CommandHandler("clear", self.clear))
         self.application.add_handler(
-            MessageHandler(filters.TEXT & ~filters.COMMAND, self.assist)
+            MessageHandler(filters.TEXT & ~filters.COMMAND, self.handleMessage)
         )
 
     def run(self):
@@ -64,21 +66,23 @@ class Jensen(object):
             poll_interval=self.POLL_INTERVAL, allowed_updates=Update.ALL_TYPES
         )
 
-    async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    async def start(self, update: Update) -> None:
         await update.message.reply_text("Welcome back sir!")
 
-    async def about(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        await update.message.reply_text(
-            "I'm Jensen your personal LLM powered chatbot."
-        )
+    async def about(self, update: Update) -> None:
+        await update.message.reply_text("I'm Jensen your personal LLM powered chatbot.")
 
-    async def help(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    async def help(self, update: Update) -> None:
         await update.message.reply_text(
             "To engage in a conversation with me just start typing.\n\nThe commands I understand:\n/about - some information about me Jensen\n/clear - clear prompt history"
         )
 
     def init_prompt(self):
-        system_instruction = os.getenv("SYSTEM_INSTRUCTION") if os.getenv("SYSTEM_INSTRUCTION") else "You are an intelligent assistant providing helpful information."
+        system_instruction = (
+            os.getenv("SYSTEM_INSTRUCTION")
+            if os.getenv("SYSTEM_INSTRUCTION")
+            else "You are an intelligent assistant providing helpful information."
+        )
         self.history = [
             {
                 "role": "system",
@@ -86,7 +90,7 @@ class Jensen(object):
             },
         ]
 
-    async def clear(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    async def clear(self, update: Update) -> None:
         self.init_prompt()
         await update.message.reply_text("Prompt history cleared.")
 
@@ -98,24 +102,33 @@ class Jensen(object):
         self.history.pop(1)
         self.history.pop(1)
 
-    def clean_reply(self, reply):
-        return reply.replace("<think>\n\n</think>\n\n", "")
+    async def generateReplyAndRespond(self, update: Update) -> str:
+        reply = ""
+        chunk = ""
+        for _, response in enumerate(
+            self.LLM.create_chat_completion(
+                messages=self.history,
+                max_tokens=self.MAX_TOKENS,
+                stream=True,
+            )
+        ):
+            print(response["choices"][0]["delta"])
+            if "content" in response["choices"][0]["delta"]:
+                chunk += str(response["choices"][0]["delta"]["content"])
 
-    def prompt_llm(self, prompt):
-        self.history.append(prompt)
-        response = self.LLM.create_chat_completion(
-            messages=self.history, max_tokens=self.MAX_TOKENS
-        )
-        reply = self.clean_reply(response["choices"][0]["message"]["content"])
-        self.history.append(
-            {
-                "role": "assistant",
-                "content": reply,
-            }
-        )
+                if chunk.endswith("\n\n"):
+                    await update.message.reply_text(chunk)
+                    reply += chunk
+                    chunk = ""
+
+        if len(chunk) > 0:
+            await update.message.reply_text(chunk)
+
         return reply
 
-    async def assist(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    async def handleMessage(
+        self, update: Update, context: ContextTypes.DEFAULT_TYPE
+    ) -> None:
         await context.bot.send_chat_action(
             chat_id=update.effective_message.chat_id, action=constants.ChatAction.TYPING
         )
@@ -125,14 +138,24 @@ class Jensen(object):
 
         start = timer()
 
+        self.history.append(prompt)
+
+        reply = ""
         try:
-            reply = self.prompt_llm(prompt)
+            reply = await self.generateReplyAndRespond(update)
         except ValueError as e:
             print(e)
             self.init_prompt()
-            reply = self.prompt_llm(prompt)
+            reply = await self.generateReplyAndRespond(update)
 
         print(reply)
+
+        self.history.append(
+            {
+                "role": "assistant",
+                "content": reply,
+            }
+        )
 
         end = timer()
 
@@ -141,47 +164,6 @@ class Jensen(object):
         print("-------------- HISTORY --------------")
         print(self.history)
         print("-------------------------------------")
-
-        chunked_replies = self.chunk_string_by_paragraph(reply)
-        print(f"chunked_replies: {chunked_replies}")
-        for chunked_reply in chunked_replies:
-          await update.message.reply_text(chunked_reply)
-
-    def chunk_string_by_paragraph(self, text: str, max_length: int = 3584) -> list[str]:
-        """
-        Chunks a string into parts of at most `max_length` characters,
-        ensuring that each chunk contains complete paragraphs.
-
-        Args:
-            text (str): The input string to be chunked.
-            max_length (int): The maximum length of each chunk.
-
-        Returns:
-            list[str]: A list of chunks, each containing complete paragraphs.
-        """
-        if not text or max_length <= 0:
-            return []
-
-        paragraphs = text.split('\n\n')
-
-        chunks = []
-        current_chunk = ""
-
-        for paragraph in paragraphs:
-            if len(current_chunk) + len(paragraph) + (2 if current_chunk else 0) > max_length:
-                if current_chunk:
-                    chunks.append(current_chunk)
-                current_chunk = ""
-
-            if current_chunk:
-                current_chunk += "\n\n" + paragraph
-            else:
-                current_chunk = paragraph
-
-        if current_chunk:
-            chunks.append(current_chunk)
-
-        return chunks
 
 
 if __name__ == "__main__":
