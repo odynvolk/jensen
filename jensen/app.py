@@ -34,7 +34,7 @@ class Jensen(object):
         self.application.add_handler(CommandHandler("help", self.help))
         self.application.add_handler(CommandHandler("clear", self.clear))
         self.application.add_handler(
-            MessageHandler(filters.TEXT & ~filters.COMMAND, self.assist)
+            MessageHandler(filters.TEXT & ~filters.COMMAND, self.handleMessage)
         )
 
     def run(self):
@@ -42,21 +42,23 @@ class Jensen(object):
             poll_interval=self.POLL_INTERVAL, allowed_updates=Update.ALL_TYPES
         )
 
-    async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    async def start(self, update: Update) -> None:
         await update.message.reply_text("Welcome back sir!")
 
-    async def about(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        await update.message.reply_text(
-            "I'm Jensen your personal LLM powered chatbot."
-        )
+    async def about(self, update: Update) -> None:
+        await update.message.reply_text("I'm Jensen your personal LLM powered chatbot.")
 
-    async def help(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    async def help(self, update: Update) -> None:
         await update.message.reply_text(
             "To engage in a conversation with me just start typing.\n\nThe commands I understand:\n/about - some information about me Jensen\n/clear - clear prompt history"
         )
 
     def init_prompt(self):
-        system_instruction = os.getenv("SYSTEM_INSTRUCTION") if os.getenv("SYSTEM_INSTRUCTION") else "You are an intelligent assistant providing helpful information."
+        system_instruction = (
+            os.getenv("SYSTEM_INSTRUCTION")
+            if os.getenv("SYSTEM_INSTRUCTION")
+            else "You are an intelligent assistant providing helpful information."
+        )
         self.history = [
             {
                 "role": "system",
@@ -64,7 +66,7 @@ class Jensen(object):
             },
         ]
 
-    async def clear(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    async def clear(self, update: Update) -> None:
         self.init_prompt()
         await update.message.reply_text("Prompt history cleared.")
 
@@ -75,9 +77,6 @@ class Jensen(object):
         # Remove fist user prompts and assistant answers
         self.history.pop(1)
         self.history.pop(1)
-
-    def clean_reply(self, reply):
-        return reply.replace("<think>\n\n</think>\n\n", "")
 
     async def prompt_llm(self, update: Update, prompt):
         self.history.append(prompt)
@@ -117,7 +116,9 @@ class Jensen(object):
             }
         )
 
-    async def assist(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    async def handleMessage(
+        self, update: Update, context: ContextTypes.DEFAULT_TYPE
+    ) -> None:
         await context.bot.send_chat_action(
             chat_id=update.effective_message.chat_id, action=constants.ChatAction.TYPING
         )
