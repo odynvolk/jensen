@@ -3,7 +3,6 @@ import re
 from timeit import default_timer as timer
 
 from dotenv import load_dotenv
-from llama_cpp import Llama
 from telegram import Update, constants
 from telegram.ext import (
     Application,
@@ -13,41 +12,20 @@ from telegram.ext import (
     filters,
 )
 
+import requests
+import json
+
 load_dotenv()
+
 
 class Jensen(object):
     def __init__(self):
-        self.MODEL_PATH = os.getenv("MODEL_PATH")
-        self.N_CTX = int(os.getenv("N_CTX")) if os.getenv("N_CTX") else 512
-        self.N_GPU_LAYERS = (
-            int(os.getenv("N_GPU_LAYERS")) if os.getenv("N_GPU_LAYERS") else 0
-        )
-        self.N_THREADS = int(os.getenv("N_THREADS")) if os.getenv("N_THREADS") else None
-        self.MAX_TOKENS = (
-            int(os.getenv("MAX_TOKENS")) if os.getenv("MAX_TOKENS") else 512
-        )
-        self.USE_MLOCK = (
-            os.getenv("USE_MLOCK").lower() == "true"
-            if os.getenv("USE_MLOCK")
-            else False
-        )
-
         self.API_KEY = os.getenv("API_KEY")
         self.POLL_INTERVAL = (
             float(os.getenv("POLL_INTERVAL")) if os.getenv("POLL_INTERVAL") else 1.0
         )
 
         self.init_prompt()
-
-        self.LLM = Llama(
-            model_path=self.MODEL_PATH,
-            n_ctx=self.N_CTX,
-            n_gpu_layers=self.N_GPU_LAYERS,
-            n_threads=self.N_THREADS,
-            use_mlock=self.USE_MLOCK,
-            ubatch_size=512,
-            batch_size=512,
-        )
 
         self.application = Application.builder().token(self.API_KEY).build()
 
@@ -101,19 +79,43 @@ class Jensen(object):
     def clean_reply(self, reply):
         return reply.replace("<think>\n\n</think>\n\n", "")
 
-    def prompt_llm(self, prompt):
+    async def prompt_llm(self, update: Update, prompt):
         self.history.append(prompt)
-        response = self.LLM.create_chat_completion(
-            messages=self.history, max_tokens=self.MAX_TOKENS
-        )
-        reply = self.clean_reply(response["choices"][0]["message"]["content"])
+
+        response = requests.post("http://localhost:8700/v1/chat/completions", json={ "messages": self.history, "stream": True}, stream=True)
+        completeReply = ""
+        reply = ""
+        for line in response.iter_lines():
+            if line:
+                decoded_line = line.decode("utf-8")
+                if decoded_line.startswith("data:"):
+                    json_data = decoded_line[len("data:"):].strip()
+                    if json_data == "[DONE]":
+                        break
+                    try:
+                        chunk = json.loads(json_data)
+                        # Process the token from the chunk
+                        if "choices" in chunk and chunk["choices"]:
+                            content = chunk["choices"][0]["delta"].get("content", "")
+                            if content is not None:
+                              completeReply += content
+                              if "\n\n" in content:
+                                paragraphs = content.split("\n\n")
+                                await update.message.reply_text(reply + paragraphs[0])
+                                reply = paragraphs[1]
+                              else:
+                                reply += content
+                            print(content, end="", flush=True)
+                    except json.JSONDecodeError:
+                        continue
+
+        await update.message.reply_text(reply)
         self.history.append(
             {
                 "role": "assistant",
-                "content": reply,
+                "content": completeReply,
             }
         )
-        return reply
 
     async def assist(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await context.bot.send_chat_action(
@@ -126,62 +128,19 @@ class Jensen(object):
         start = timer()
 
         try:
-            reply = self.prompt_llm(prompt)
+            await self.prompt_llm(update, prompt)
         except ValueError as e:
             print(e)
             self.init_prompt()
-            reply = self.prompt_llm(prompt)
-
-        print(reply)
+            await self.prompt_llm(update, prompt)
 
         end = timer()
 
-        print(f"DURATION: {int(end - start)} seconds.")
+        print(f"\n\nDURATION: {int(end - start)} seconds.\n\n")
         print("-------------------------------------")
         print("-------------- HISTORY --------------")
         print(self.history)
         print("-------------------------------------")
-
-        chunked_replies = self.chunk_string_by_paragraph(reply)
-        print(f"chunked_replies: {chunked_replies}")
-        for chunked_reply in chunked_replies:
-          await update.message.reply_text(chunked_reply)
-
-    def chunk_string_by_paragraph(self, text: str, max_length: int = 3584) -> list[str]:
-        """
-        Chunks a string into parts of at most `max_length` characters,
-        ensuring that each chunk contains complete paragraphs.
-
-        Args:
-            text (str): The input string to be chunked.
-            max_length (int): The maximum length of each chunk.
-
-        Returns:
-            list[str]: A list of chunks, each containing complete paragraphs.
-        """
-        if not text or max_length <= 0:
-            return []
-
-        paragraphs = text.split('\n\n')
-
-        chunks = []
-        current_chunk = ""
-
-        for paragraph in paragraphs:
-            if len(current_chunk) + len(paragraph) + (2 if current_chunk else 0) > max_length:
-                if current_chunk:
-                    chunks.append(current_chunk)
-                current_chunk = ""
-
-            if current_chunk:
-                current_chunk += "\n\n" + paragraph
-            else:
-                current_chunk = paragraph
-
-        if current_chunk:
-            chunks.append(current_chunk)
-
-        return chunks
 
 
 if __name__ == "__main__":

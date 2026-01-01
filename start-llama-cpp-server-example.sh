@@ -1,0 +1,12 @@
+llama-server \
+--port 8700 \
+--jinja \
+--ctx-size 32764 \
+--temp 0.7 \
+--top-k 20 \
+--top-p 0.2 \
+--min-p 0.0 \
+--slots \
+--cache-reuse 256 \
+--no-webui \
+-m ~/my_models/some-model.gguf
