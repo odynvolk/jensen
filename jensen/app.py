@@ -3,7 +3,6 @@ import re
 from timeit import default_timer as timer
 
 from dotenv import load_dotenv
-from llama_cpp import Llama
 from telegram import Update, constants
 from telegram.ext import (
     Application,
@@ -13,43 +12,20 @@ from telegram.ext import (
     filters,
 )
 
+import requests
+import json
+
 load_dotenv()
 
 
 class Jensen(object):
     def __init__(self):
-        self.MODEL_PATH = os.getenv("MODEL_PATH")
-        self.N_CTX = int(os.getenv("N_CTX")) if os.getenv("N_CTX") else 512
-        self.N_GPU_LAYERS = (
-            int(os.getenv("N_GPU_LAYERS")) if os.getenv("N_GPU_LAYERS") else 0
-        )
-        self.N_THREADS = int(os.getenv("N_THREADS")) if os.getenv("N_THREADS") else None
-        self.MAX_TOKENS = (
-            int(os.getenv("MAX_TOKENS")) if os.getenv("MAX_TOKENS") else 512
-        )
-        self.USE_MLOCK = (
-            os.getenv("USE_MLOCK").lower() == "true"
-            if os.getenv("USE_MLOCK")
-            else False
-        )
-
         self.API_KEY = os.getenv("API_KEY")
         self.POLL_INTERVAL = (
             float(os.getenv("POLL_INTERVAL")) if os.getenv("POLL_INTERVAL") else 1.0
         )
 
         self.init_prompt()
-
-        self.LLM = Llama(
-            model_path=self.MODEL_PATH,
-            n_ctx=self.N_CTX,
-            n_gpu_layers=self.N_GPU_LAYERS,
-            n_threads=self.N_THREADS,
-            use_mlock=self.USE_MLOCK,
-            ubatch_size=640,
-            batch_size=640,
-            cache_prompt=True,
-        )
 
         self.application = Application.builder().token(self.API_KEY).build()
 
@@ -102,29 +78,43 @@ class Jensen(object):
         self.history.pop(1)
         self.history.pop(1)
 
-    async def generateReplyAndRespond(self, update: Update) -> str:
+    async def prompt_llm(self, update: Update, prompt):
+        self.history.append(prompt)
+
+        response = requests.post("http://localhost:8700/v1/chat/completions", json={ "messages": self.history, "stream": True}, stream=True)
+        completeReply = ""
         reply = ""
-        chunk = ""
-        for _, response in enumerate(
-            self.LLM.create_chat_completion(
-                messages=self.history,
-                max_tokens=self.MAX_TOKENS,
-                stream=True,
-            )
-        ):
-            print(response["choices"][0]["delta"])
-            if "content" in response["choices"][0]["delta"]:
-                chunk += str(response["choices"][0]["delta"]["content"])
+        for line in response.iter_lines():
+            if line:
+                decoded_line = line.decode("utf-8")
+                if decoded_line.startswith("data:"):
+                    json_data = decoded_line[len("data:"):].strip()
+                    if json_data == "[DONE]":
+                        break
+                    try:
+                        chunk = json.loads(json_data)
+                        # Process the token from the chunk
+                        if "choices" in chunk and chunk["choices"]:
+                            content = chunk["choices"][0]["delta"].get("content", "")
+                            if content is not None:
+                              completeReply += content
+                              if "\n\n" in content:
+                                paragraphs = content.split("\n\n")
+                                await update.message.reply_text(reply + paragraphs[0])
+                                reply = paragraphs[1]
+                              else:
+                                reply += content
+                            print(content, end="", flush=True)
+                    except json.JSONDecodeError:
+                        continue
 
-                if chunk.endswith("\n\n"):
-                    await update.message.reply_text(chunk)
-                    reply += chunk
-                    chunk = ""
-
-        if len(chunk) > 0:
-            await update.message.reply_text(chunk)
-
-        return reply
+        await update.message.reply_text(reply)
+        self.history.append(
+            {
+                "role": "assistant",
+                "content": completeReply,
+            }
+        )
 
     async def handleMessage(
         self, update: Update, context: ContextTypes.DEFAULT_TYPE
@@ -138,28 +128,16 @@ class Jensen(object):
 
         start = timer()
 
-        self.history.append(prompt)
-
-        reply = ""
         try:
-            reply = await self.generateReplyAndRespond(update)
+            await self.prompt_llm(update, prompt)
         except ValueError as e:
             print(e)
             self.init_prompt()
-            reply = await self.generateReplyAndRespond(update)
-
-        print(reply)
-
-        self.history.append(
-            {
-                "role": "assistant",
-                "content": reply,
-            }
-        )
+            await self.prompt_llm(update, prompt)
 
         end = timer()
 
-        print(f"DURATION: {int(end - start)} seconds.")
+        print(f"\n\nDURATION: {int(end - start)} seconds.\n\n")
         print("-------------------------------------")
         print("-------------- HISTORY --------------")
         print(self.history)

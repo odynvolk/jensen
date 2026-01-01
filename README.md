@@ -14,6 +14,15 @@ You need a LLM in GGUF format. You can find quite a few through [TheBloke on Hug
 who has done an enormous service to the community by converting different models to GGUF and quantized them. Pick one that suits your
 needs and hardware requirements.
 
+### Llama.cpp
+
+You need [Llama.cpp](https://github.com/ggml-org/llama.cpp) in order to be able to run a model on your machine. There are other 
+alternatives out there like Ollama and LM Studio, but I prefer llama.cpp due to it being lightweight. It's easy to install through Brew.
+
+```bash
+$ brew install lama.cpp
+```
+
 ### Python
 
 You need Python 3 on your machine.
@@ -38,17 +47,11 @@ $ pip install -r requirements.txt
 
 ## Configuration
 
+Copy ./start-llama-cpp-server-example.sh to ./start-llama-cpp-server.sh and enter the model and settings you want.
+
 Create a `.env` file with the following properties.
 
 ```
-# LLM
-MODEL_PATH=<path to model file, string> (mandatory)
-MAX_TOKENS=<max tokens, int>
-N_CTX=<number of context, int>
-N_GPU_LAYERS<how many layers to offload to the GPU, int>
-N_THREADS=<number of threads to use for Llama usage, int>
-USE_MLOCK=<force the system to keep the model in RAM., bool>
-
 # Telegram
 API_KEY=<api key, string> (mandatory)
 POLL_INTERVAL=<interval to use when polling Telegram as seconds, float>
@@ -56,8 +59,16 @@ POLL_INTERVAL=<interval to use when polling Telegram as seconds, float>
 
 ## Usage
 
+Start the llama.cpp server:
+
+```bash
+./start-llama-cpp-server.sh
+```
+
 Start the application:
 
 ```bash
 python ./jensen/app.py
 ```
+
+And you're off to the races.
