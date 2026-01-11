@@ -42,13 +42,13 @@ class Jensen(object):
             poll_interval=self.POLL_INTERVAL, allowed_updates=Update.ALL_TYPES
         )
 
-    async def start(self, update: Update) -> None:
+    async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await update.message.reply_text("Welcome back sir!")
 
-    async def about(self, update: Update) -> None:
+    async def about(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await update.message.reply_text("I'm Jensen your personal LLM powered chatbot.")
 
-    async def help(self, update: Update) -> None:
+    async def help(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await update.message.reply_text(
             "To engage in a conversation with me just start typing.\n\nThe commands I understand:\n/about - some information about me Jensen\n/clear - clear prompt history"
         )
@@ -66,7 +66,7 @@ class Jensen(object):
             },
         ]
 
-    async def clear(self, update: Update) -> None:
+    async def clear(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         self.init_prompt()
         await update.message.reply_text("Prompt history cleared.")
 
@@ -100,7 +100,9 @@ class Jensen(object):
                               completeReply += content
                               if "\n\n" in content:
                                 paragraphs = content.split("\n\n")
-                                await update.message.reply_text(reply + paragraphs[0])
+                                reply_text = reply + paragraphs[0]
+                                if len(reply_text) > 0:
+                                  await update.message.reply_text(reply_text)
                                 reply = paragraphs[1]
                               else:
                                 reply += content
