@@ -24,7 +24,8 @@ class Jensen(object):
         self.POLL_INTERVAL = (
             float(os.getenv("POLL_INTERVAL")) if os.getenv("POLL_INTERVAL") else 1.0
         )
-
+        self.OPEN_AI_URL = os.getenv("OPEN_AI_URL")
+        self.OPEN_AI_MODEL = os.getenv("OPEN_AI_MODEL")
         self.init_prompt()
 
         self.application = Application.builder().token(self.API_KEY).build()
@@ -80,8 +81,7 @@ class Jensen(object):
 
     async def prompt_llm(self, update: Update, prompt):
         self.history.append(prompt)
-
-        response = requests.post("http://localhost:8700/v1/chat/completions", json={ "messages": self.history, "stream": True}, stream=True)
+        response = requests.post(f"{self.OPEN_AI_URL}/chat/completions", json={ "messages": self.history, "stream": True, "model": self.OPEN_AI_MODEL}, stream=True)
         completeReply = ""
         reply = ""
         for line in response.iter_lines():
