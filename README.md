@@ -55,6 +55,10 @@ Create a `.env` file with the following properties.
 # Telegram
 API_KEY=<api key, string> (mandatory)
 POLL_INTERVAL=<interval to use when polling Telegram as seconds, float>
+
+# LLM
+OPEN_AI_URL=<some Open AI compatible API>
+OPEN_AI_MODEL=<name of model to use>
 ```
 
 ## Usage
