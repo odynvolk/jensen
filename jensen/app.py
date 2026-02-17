@@ -1,5 +1,4 @@
 import os
-import re
 from timeit import default_timer as timer
 
 from dotenv import load_dotenv
